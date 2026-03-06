@@ -1,0 +1,180 @@
+id: investment-analysis-v1
+name: investment-analysis
+version: 1.0.0
+author: paras@getbindu.com
+
+# Description
+description: |
+  Performs comprehensive investment analysis and financial research using real-time market data,
+  fundamental analysis, technical indicators, and sentiment analysis to generate professional
+  investment recommendations and detailed stock reports.
+
+# Tags and Modes
+tags:
+  - investment-analysis
+  - financial-research
+  - stock-analysis
+  - market-sentiment
+  - technical-analysis
+  - portfolio-management
+  - risk-assessment
+  - investment-recommendations
+
+input_modes:
+  - text/plain
+  - application/json
+
+output_modes:
+  - text/plain
+  - application/json
+  - text/markdown
+
+# Example Queries
+examples:
+  - "Analyze Apple (AAPL) stock for potential investment"
+  - "Compare Microsoft vs Google for long-term investment"
+  - "What's the current market sentiment and should I invest in tech stocks?"
+  - "Provide a detailed analysis of Tesla's financial health and future prospects"
+  - "Check earnings calendar and analyze companies reporting this week"
+  - "Evaluate the risk and return potential of NVIDIA stock"
+  - "Get market movers and identify best investment opportunities"
+
+# Detailed Capabilities
+capabilities_detail:
+  primary_capability:
+    supported: true
+    description: "Comprehensive investment analysis with real-time data integration"
+    features:
+      - "Real-time market data analysis including market movers and price trends"
+      - "Fundamental analysis with financial statements and valuation metrics"
+      - "Technical analysis using SMA, EMA, RSI, MACD, and Bollinger Bands"
+      - "Market sentiment analysis through Fear & Greed indices and Google Trends"
+      - "Institutional ownership and insider trading analysis"
+      - "Earnings analysis and surprise tracking"
+      - "Options chain analysis for strategic positioning"
+      - "Professional investment recommendations with risk assessment"
+    limitations: "Market data may have delays; very recent events may not be reflected immediately"
+
+  secondary_capability:
+    supported: true
+    description: "Portfolio optimization and risk management insights"
+    features:
+      - "Multi-stock comparison and relative strength analysis"
+      - "Sector rotation and market trend identification"
+      - "Risk assessment and position sizing recommendations"
+      - "Portfolio diversification suggestions"
+      - "Market timing and entry/exit point analysis"
+
+# Requirements
+requirements:
+  packages:
+    - agno>=2.2.0
+    - bindu>=2026.1.7
+    - yfinance[nospam]>=0.2.66
+    - pandas>=2.3.3
+    - numpy>=2.0
+    - httpx>=0.28.1
+    - hishel>=1.0.0
+    - tenacity>=9.1.2
+    - pytrends>=4.9.2
+    - openai>=1.60.0
+    - python-dotenv>=1.0.1
+  system:
+    - "Internet access for real-time market data"
+  min_memory_mb: 512
+  external_services:
+    - Yahoo Finance API
+    - CNN Fear & Greed Index
+    - Alternative.me Crypto API
+    - Nasdaq Earnings Calendar
+    - Google Trends API
+
+# Performance Metrics
+performance:
+  avg_processing_time_ms: 5000
+  avg_time_per_analysis_ms: 2000
+  max_concurrent_requests: 3
+  memory_per_request_mb: 512
+  timeout_seconds: 120
+  max_stocks_per_analysis: 10
+  scalability: horizontal
+
+# Tool Restrictions
+allowed_tools:
+  - get_market_movers
+  - get_cnn_fear_greed_index
+  - get_crypto_fear_greed_index
+  - get_google_trends
+  - get_ticker_data
+  - get_options
+  - get_price_history
+  - get_financial_statements
+  - get_institutional_holders
+  - get_earnings_history
+  - get_insider_trades
+  - get_nasdaq_earnings_calendar
+  - calculate_technical_indicator
+  - Mem0Tools
+
+# Rich Documentation
+documentation:
+  overview: |
+    Provides AI-driven investment analysis and financial research capabilities.
+    Combines real-time market data, fundamental analysis, technical indicators,
+    and sentiment analysis to generate professional investment recommendations.
+
+  key_features:
+    - "Real-time market data integration with Yahoo Finance"
+    - "Comprehensive fundamental analysis with financial statements"
+    - "Advanced technical analysis using multiple indicators"
+    - "Market sentiment analysis through multiple data sources"
+    - "Institutional flow and insider trading analysis"
+    - "Professional investment recommendations with risk assessment"
+    - "Portfolio optimization and diversification insights"
+
+  use_cases:
+    - "Individual stock analysis for investment decisions"
+    - "Portfolio risk assessment and optimization"
+    - "Market timing and entry/exit point identification"
+    - "Sector analysis and rotation strategies"
+    - "Earnings season analysis and surprise tracking"
+    - "Market sentiment analysis and contrarian opportunities"
+
+  methodology:
+    - "Data Gathering: Real-time market data, financial statements, sentiment indicators"
+    - "Fundamental Analysis: Revenue, earnings, margins, valuation metrics"
+    - "Technical Analysis: Price trends, momentum indicators, support/resistance"
+    - "Sentiment Analysis: Fear & Greed, institutional flows, insider activity"
+    - "Risk Assessment: Volatility, concentration, market correlation"
+    - "Recommendation Generation: Buy/sell/hold with price targets and time horizons"
+
+  data_sources:
+    - "Yahoo Finance: Real-time market data, company financials, options chains"
+    - "CNN: Fear & Greed Index for market sentiment"
+    - "Alternative.me: Crypto Fear & Greed Index"
+    - "Nasdaq: Earnings calendar and company announcements"
+    - "Google Trends: Search interest and market sentiment indicators"
+    - "SEC filings: Insider trading and institutional ownership data"
+
+  output_format:
+    - "Executive summary with clear investment recommendation"
+    - "Detailed financial analysis with key metrics and trends"
+    - "Risk assessment with potential scenarios and mitigation strategies"
+    - "Price targets and investment time horizons"
+    - "Actionable insights and monitoring recommendations"
+
+  limitations:
+    - "Market data may be delayed by 15-20 minutes"
+    - "Very recent news events may not be immediately reflected"
+    - "Technical indicators are based on historical data and may not predict future movements"
+    - "Investment recommendations should not be considered as financial advice"
+    - "Always consult with qualified financial professionals for investment decisions"
+
+  best_practices:
+    - "Use multiple data sources for comprehensive analysis"
+    - "Consider both fundamental and technical factors"
+    - "Assess market sentiment alongside quantitative metrics"
+    - "Always evaluate risk factors before making investment decisions"
+    - "Monitor earnings calendar and upcoming catalysts"
+    - "Diversify portfolio to manage concentration risk"
+    - "Set clear entry and exit criteria for investments"
