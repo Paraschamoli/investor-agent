@@ -7,8 +7,7 @@
 #
 #  Thank you users! We ❤️ you! - 🌻
 
-"""investor-agent - An Bindu Agent.
-"""
+"""investor-agent - An Bindu Agent."""
 
 from investor_agent.__version__ import __version__
 from investor_agent.main import (

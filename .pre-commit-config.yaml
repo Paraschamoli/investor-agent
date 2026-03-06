@@ -21,12 +21,6 @@ repos:
         args: [ --exit-non-zero-on-fix ]
       - id: ruff-format
 
-  - repo: https://github.com/PyCQA/pydocstyle
-    rev: "6.3.0"
-    hooks:
-      - id: pydocstyle
-        additional_dependencies: ["tomli"]
-
   - repo: local
     hooks:
       - id: ty-check

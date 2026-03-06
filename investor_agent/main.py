@@ -7,9 +7,7 @@
 #
 #  Thank you users! We ❤️ you! - 🌻
 
-"""investor-agent - An Bindu Agent.
-
-"""
+"""investor-agent - An Bindu Agent."""
 
 import argparse
 import asyncio
@@ -17,23 +15,30 @@ import json
 import os
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional
-
+from typing import Any
 
 from agno.agent import Agent
 from agno.models.openrouter import OpenRouter
 from agno.tools import Toolkit
 from agno.tools.mem0 import Mem0Tools
-
 from bindu.penguin.bindufy import bindufy
 from dotenv import load_dotenv
-from investor_agent.tools import (
-    get_market_movers, get_cnn_fear_greed_index, get_crypto_fear_greed_index,
-    get_google_trends, get_ticker_data, get_options, get_price_history,
-    get_financial_statements, get_institutional_holders, get_earnings_history,
-    get_insider_trades, get_nasdaq_earnings_calendar, calculate_technical_indicator
-)
 
+from investor_agent.tools import (
+    calculate_technical_indicator,
+    get_cnn_fear_greed_index,
+    get_crypto_fear_greed_index,
+    get_earnings_history,
+    get_financial_statements,
+    get_google_trends,
+    get_insider_trades,
+    get_institutional_holders,
+    get_market_movers,
+    get_nasdaq_earnings_calendar,
+    get_options,
+    get_price_history,
+    get_ticker_data,
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -50,7 +55,7 @@ _init_lock = asyncio.Lock()
 
 class InvestmentTools(Toolkit):
     """Custom toolkit for investment analysis functions."""
-    
+
     def __init__(self):
         super().__init__(name="investment_tools")
         self.register(get_market_movers)
@@ -71,7 +76,7 @@ class InvestmentTools(Toolkit):
 def initialize_investment_tools() -> None:
     """Initialize all investment analysis tools as a Toolkit instance."""
     global investment_tools
-    
+
     investment_tools = InvestmentTools()
     print("✅ Investment analysis tools initialized")
 
@@ -81,7 +86,7 @@ def load_config() -> dict:
     # Get path to agent_config.json in project root
     config_path = Path(__file__).parent / "agent_config.json"
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         return json.load(f)
 
 
@@ -106,12 +111,16 @@ async def initialize_agent() -> None:
             cache_response=True,
             supports_native_structured_outputs=True,
         ),
-        tools=[tool for tool in [
-            investment_tools,  # Investment analysis toolkit
-            Mem0Tools(api_key=mem0_api_key) if mem0_api_key else None
-        ] if tool is not None],
+        tools=[
+            tool
+            for tool in [
+                investment_tools,  # Investment analysis toolkit
+                Mem0Tools(api_key=mem0_api_key) if mem0_api_key else None,
+            ]
+            if tool is not None
+        ],
         description=dedent("""\
-            You are an elite financial analyst and investment researcher with decades of experience 
+            You are an elite financial analyst and investment researcher with decades of experience
             at top investment firms and hedge funds. Your expertise encompasses: 💼
 
             - Comprehensive financial analysis and valuation
@@ -201,7 +210,7 @@ async def initialize_agent() -> None:
 async def cleanup_tools() -> None:
     """Clean up any resources."""
     global investment_tools
-    
+
     if investment_tools:
         print("🔌 Investment analysis tools cleaned up")
 
@@ -224,8 +233,6 @@ async def run_agent(messages: list[dict[str, str]]) -> Any:
     return response
 
 
-
-
 async def handler(messages: list[dict[str, str]]) -> Any:
     """Handle incoming agent messages.
 
@@ -236,7 +243,7 @@ async def handler(messages: list[dict[str, str]]) -> Any:
     Returns:
         Agent response (ManifestWorker will handle extraction)
     """
-    
+
     # Run agent with messages
     global _initialized
 
@@ -250,10 +257,9 @@ async def handler(messages: list[dict[str, str]]) -> Any:
     # Run the async agent
     result = await run_agent(messages)
     return result
-    
 
 
-async def initialize_all(env: Optional[dict[str, str]] = None):
+async def initialize_all(env: dict[str, str] | None = None):
     """Initialize agent and tools.
 
     Args:
@@ -295,9 +301,9 @@ def main():
     mem0_api_key = args.mem0_api_key
 
     if not openrouter_api_key:
-        raise ValueError("OPENROUTER_API_KEY required") # noqa: TRY003
+        raise ValueError("OPENROUTER_API_KEY required")
     if not mem0_api_key:
-        raise ValueError("MEM0_API_KEY required. Get your API key from: https://app.mem0.ai/dashboard/api-keys") # noqa: TRY003
+        raise ValueError("MEM0_API_KEY required. Get your API key from: https://app.mem0.ai/dashboard/api-keys")
 
     print(f"🤖 Investment Analysis Agent using model: {model_name}")
     print("💼 Comprehensive financial analysis with integrated investment tools")

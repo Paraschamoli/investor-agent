@@ -9,13 +9,12 @@ import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
-from typing import Literal, Any
+from typing import Any, Literal
 
-import httpx
 import pandas as pd
 import yfinance as yf
 from hishel.httpx import AsyncCacheClient
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, after_log
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from yfinance.exceptions import YFRateLimitError
 
 # Configure pandas
@@ -24,6 +23,7 @@ from yfinance.exceptions import YFRateLimitError
 # Check TA-Lib availability
 try:
     import talib
+
     _ta_available = True
 except ImportError:
     _ta_available = False
@@ -32,8 +32,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr)]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],
 )
 
 # =============================================================================
@@ -42,7 +42,7 @@ logging.basicConfig(
 
 # HTTP Headers for browser-like requests
 BROWSER_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
 # Yahoo Finance URLs
@@ -58,25 +58,37 @@ CRYPTO_FEAR_GREED_URL = "https://api.alternative.me/fng/"
 NASDAQ_EARNINGS_URL = "https://api.nasdaq.com/api/calendar/earnings"
 
 # Nasdaq-specific headers
-NASDAQ_HEADERS = {
-    **BROWSER_HEADERS,
-    'Referer': 'https://www.nasdaq.com/'
-}
+NASDAQ_HEADERS = {**BROWSER_HEADERS, "Referer": "https://www.nasdaq.com/"}
+
 
 # Unified retry decorator for API calls (yfinance and HTTP)
 def api_retry(func):
     return retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=2.0, min=2.0, max=30.0),
-        retry=retry_if_exception(lambda e:
-            isinstance(e, YFRateLimitError) or
-            (hasattr(e, 'status_code') and getattr(e, 'status_code', 0) >= 500) or
-            any(term in str(e).lower() for term in [
-                "rate limit", "too many requests", "temporarily blocked",
-                "timeout", "connection", "network", "temporary", "5", "429", "502", "503", "504"
-            ])
+        retry=retry_if_exception(
+            lambda e: isinstance(e, YFRateLimitError)
+            or (hasattr(e, "status_code") and getattr(e, "status_code", 0) >= 500)
+            or any(
+                term in str(e).lower()
+                for term in [
+                    "rate limit",
+                    "too many requests",
+                    "temporarily blocked",
+                    "timeout",
+                    "connection",
+                    "network",
+                    "temporary",
+                    "5",
+                    "429",
+                    "502",
+                    "503",
+                    "504",
+                ]
+            )
         ),
     )(func)
+
 
 # HTTP client utility
 def create_async_client(headers: dict | None = None) -> AsyncCacheClient:
@@ -87,6 +99,7 @@ def create_async_client(headers: dict | None = None) -> AsyncCacheClient:
         headers=headers,
     )
 
+
 @api_retry
 async def fetch_json(url: str, headers: dict | None = None) -> dict:
     """Generic JSON fetcher with retry logic."""
@@ -95,13 +108,15 @@ async def fetch_json(url: str, headers: dict | None = None) -> dict:
         response.raise_for_status()
         return response.json()
 
+
 @api_retry
 async def fetch_text(url: str, headers: dict | None = None) -> str:
-    """Generic text fetcher with retry logic."""
+    """Fetch text data from the given URL with retry logic."""
     async with create_async_client(headers=headers) as client:
         response = await client.get(url)
         response.raise_for_status()
         return response.text
+
 
 # Utility functions
 def validate_ticker(ticker: str) -> str:
@@ -110,12 +125,14 @@ def validate_ticker(ticker: str) -> str:
         raise ValueError("Ticker symbol cannot be empty")
     return ticker
 
+
 def validate_date(date_str: str) -> datetime.date:
     """Validate and parse a date string in YYYY-MM-DD format."""
     try:
-        return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        raise ValueError(f"Invalid date format: {date_str}. Use YYYY-MM-DD")
+        return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError as e:
+        raise ValueError(f"Invalid date format: {date_str}. Use YYYY-MM-DD") from e
+
 
 def validate_date_range(start_str: str | None, end_str: str | None) -> None:
     start_date = None
@@ -129,11 +146,13 @@ def validate_date_range(start_str: str | None, end_str: str | None) -> None:
     if start_date and end_date and start_date > end_date:
         raise ValueError("start_date must be before or equal to end_date")
 
+
 @api_retry
 def yf_call(ticker: str, method: str, *args, **kwargs):
-    """Generic yfinance API call with retry logic."""
+    """Make a generic yfinance API call with retry logic."""
     t = yf.Ticker(ticker)
     return getattr(t, method)(*args, **kwargs)
+
 
 def get_options_chain(ticker: str, expiry: str, option_type: Literal["C", "P"] | None = None) -> pd.DataFrame:
     """Get options chain with optional filtering by type."""
@@ -146,12 +165,13 @@ def get_options_chain(ticker: str, expiry: str, option_type: Literal["C", "P"] |
 
     return pd.concat([chain.calls, chain.puts], ignore_index=True)
 
+
 def to_clean_csv(df: pd.DataFrame) -> str:
     """Clean DataFrame by removing empty columns and convert to CSV string."""
     # Chain operations more efficiently
-    mask = (df.notna().any() & (df != '').any() &
-            ((df != 0).any() | (df.dtypes == 'object')))
-    return df.loc[:, mask].fillna('').to_csv(index=False)
+    mask = df.notna().any() & (df != "").any() & ((df != 0).any() | (df.dtypes == "object"))
+    return df.loc[:, mask].fillna("").to_csv(index=False)
+
 
 def format_date_string(date_str: str) -> str | None:
     """Parse and format date string to YYYY-MM-DD format."""
@@ -160,28 +180,28 @@ def format_date_string(date_str: str) -> str | None:
     except Exception:
         return date_str[:10] if date_str else None
 
+
 # Google Trends timeframe mapping
-TREND_TIMEFRAMES = {
-    1: 'now 1-d', 7: 'now 7-d', 30: 'today 1-m',
-    90: 'today 3-m', 365: 'today 12-m'
-}
+TREND_TIMEFRAMES = {1: "now 1-d", 7: "now 7-d", 30: "today 1-m", 90: "today 3-m", 365: "today 12-m"}
+
 
 def get_trends_timeframe(days: int) -> str:
     """Get appropriate Google Trends timeframe for given days."""
     for max_days, timeframe in TREND_TIMEFRAMES.items():
         if days <= max_days:
             return timeframe
-    return 'today 5-y'
+    return "today 5-y"
 
 
 # =============================================================================
 # Market Data Tools
 # =============================================================================
 
+
 async def get_market_movers(
     category: Literal["gainers", "losers", "most-active"] = "most-active",
     count: int = 25,
-    market_session: Literal["regular", "pre-market", "after-hours"] = "regular"
+    market_session: Literal["regular", "pre-market", "after-hours"] = "regular",
 ) -> str:
     """market_session only applies to most-active category."""
     count = min(max(count, 1), 100)
@@ -211,7 +231,7 @@ async def get_market_movers(
     if not tables or tables[0].empty:
         return f"No data found for {category}"
 
-    df = tables[0].loc[:, ~tables[0].columns.str.contains('^Unnamed')]
+    df = tables[0].loc[:, ~tables[0].columns.str.contains("^Unnamed")]
     return to_clean_csv(df.head(count))
 
 
@@ -224,9 +244,10 @@ async def get_cnn_fear_greed_index(
             "market_volatility_vix",
             "market_volatility_vix_50",
             "junk_bond_demand",
-            "safe_haven_demand"
+            "safe_haven_demand",
         ]
-    ] | None = None
+    ]
+    | None = None,
 ) -> dict:
     """Scale: 0-25 Extreme Fear, 25-45 Fear, 45-55 Neutral, 55-75 Greed, 75-100 Extreme Greed."""
     raw_data = await fetch_json(CNN_FEAR_GREED_URL, BROWSER_HEADERS)
@@ -235,8 +256,7 @@ async def get_cnn_fear_greed_index(
 
     # Remove historical time series data arrays
     result = {
-        k: {inner_k: inner_v for inner_k, inner_v in v.items() if inner_k != "data"}
-        if isinstance(v, dict) else v
+        k: {inner_k: inner_v for inner_k, inner_v in v.items() if inner_k != "data"} if isinstance(v, dict) else v
         for k, v in raw_data.items()
         if k != "fear_and_greed_historical"
     }
@@ -260,21 +280,18 @@ async def get_crypto_fear_greed_index() -> dict:
     return {
         "value": current_data["value"],
         "classification": current_data["value_classification"],
-        "timestamp": current_data["timestamp"]
+        "timestamp": current_data["timestamp"],
     }
 
 
-def get_google_trends(
-    keywords: list[str],
-    period_days: int = 7
-) -> str:
+def get_google_trends(keywords: list[str], period_days: int = 7) -> str:
     """Values are relative 0-100 where 100 = peak popularity in the period."""
     from pytrends.request import TrendReq
 
     logger.info(f"Fetching Google Trends data for {period_days} days")
 
     timeframe = get_trends_timeframe(period_days)
-    pytrends = TrendReq(hl='en-US', tz=360)
+    pytrends = TrendReq(hl="en-US", tz=360)
     pytrends.build_payload(keywords, timeframe=timeframe)
 
     df = pytrends.interest_over_time()
@@ -282,8 +299,8 @@ def get_google_trends(
         raise ValueError("No data returned from Google Trends")
 
     # Clean and format data
-    if 'isPartial' in df.columns:
-        df = df[~df['isPartial']].drop('isPartial', axis=1)
+    if "isPartial" in df.columns:
+        df = df[~df["isPartial"]].drop("isPartial", axis=1)
 
     df_reset = df.reset_index()
 
@@ -291,12 +308,9 @@ def get_google_trends(
 
 
 def get_ticker_data(
-    ticker: str,
-    max_news: int = 5,
-    max_recommendations: int = 5,
-    max_upgrades: int = 5
+    ticker: str, max_news: int = 5, max_recommendations: int = 5, max_upgrades: int = 5
 ) -> dict[str, Any]:
-    """Returns basic_info, calendar, news, recommendations, upgrades_downgrades."""
+    """Fetch basic information about the company, calendar, news, analyst recommendations, upgrades, and downgrades."""
     ticker = validate_ticker(ticker)
 
     # Get all basic data in parallel
@@ -310,17 +324,37 @@ def get_ticker_data(
             raise ValueError(f"No information available for {ticker}")
 
         essential_fields = {
-            'symbol', 'longName', 'currentPrice', 'marketCap', 'volume', 'trailingPE',
-            'forwardPE', 'dividendYield', 'beta', 'eps', 'totalRevenue', 'totalDebt',
-            'profitMargins', 'operatingMargins', 'returnOnEquity', 'returnOnAssets',
-            'revenueGrowth', 'earningsGrowth', 'bookValue', 'priceToBook',
-            'enterpriseValue', 'pegRatio', 'trailingEps', 'forwardEps'
+            "symbol",
+            "longName",
+            "currentPrice",
+            "marketCap",
+            "volume",
+            "trailingPE",
+            "forwardPE",
+            "dividendYield",
+            "beta",
+            "eps",
+            "totalRevenue",
+            "totalDebt",
+            "profitMargins",
+            "operatingMargins",
+            "returnOnEquity",
+            "returnOnAssets",
+            "revenueGrowth",
+            "earningsGrowth",
+            "bookValue",
+            "priceToBook",
+            "enterpriseValue",
+            "pegRatio",
+            "trailingEps",
+            "forwardEps",
         }
 
         # Basic info section - convert to structured format
         basic_info = [
-            {"metric": key, "value": value.isoformat() if hasattr(value, 'isoformat') else value}
-            for key, value in info.items() if key in essential_fields
+            {"metric": key, "value": value.isoformat() if hasattr(value, "isoformat") else value}
+            for key, value in info.items()
+            if key in essential_fields
         ]
 
         result: dict[str, Any] = {"basic_info": basic_info}
@@ -329,7 +363,7 @@ def get_ticker_data(
         calendar = calendar_future.result()
         if calendar:
             result["calendar"] = [
-                {"event": key, "value": value.isoformat() if hasattr(value, 'isoformat') else value}
+                {"event": key, "value": value.isoformat() if hasattr(value, "isoformat") else value}
                 for key, value in calendar.items()
             ]
 
@@ -346,8 +380,11 @@ def get_ticker_data(
                     "date": format_date_string(raw_date),
                     "title": content.get("title") or "Untitled",
                     "source": content.get("provider", {}).get("displayName", "Unknown"),
-                    "url": (content.get("canonicalUrl", {}).get("url") or
-                            content.get("clickThroughUrl", {}).get("url") or "")
+                    "url": (
+                        content.get("canonicalUrl", {}).get("url")
+                        or content.get("clickThroughUrl", {}).get("url")
+                        or ""
+                    ),
                 })
 
             result["news"] = news_data
@@ -363,7 +400,7 @@ def get_ticker_data(
 
         upgrades = upgrades_future.result()
         if isinstance(upgrades, pd.DataFrame) and not upgrades.empty:
-            upgrades = upgrades.sort_index(ascending=False) if hasattr(upgrades, 'sort_index') else upgrades
+            upgrades = upgrades.sort_index(ascending=False) if hasattr(upgrades, "sort_index") else upgrades
             result["upgrades_downgrades"] = to_clean_csv(upgrades.head(max_upgrades))
 
     return result
@@ -378,7 +415,7 @@ def get_options(
     strike_upper: float | None = None,
     option_type: Literal["C", "P"] | None = None,
 ) -> str:
-    """Dates filter expiration. Sorted by liquidity (open interest, volume)."""
+    """Fetch options with optional filtering by date, strike, and type."""
     ticker_symbol = validate_ticker(ticker_symbol)
 
     try:
@@ -393,9 +430,7 @@ def get_options(
 
         # Filter by date
         valid_expirations = [
-            exp for exp in expirations
-            if ((not start_date or exp >= start_date) and
-                (not end_date or exp <= end_date))
+            exp for exp in expirations if ((not start_date or exp >= start_date) and (not end_date or exp <= end_date))
         ]
 
         if not valid_expirations:
@@ -407,8 +442,10 @@ def get_options(
                 chain.assign(expiryDate=expiry)
                 for chain, expiry in zip(
                     executor.map(lambda exp: get_options_chain(ticker_symbol, exp, option_type), valid_expirations),
-                    valid_expirations
-                ) if chain is not None
+                    valid_expirations,
+                    strict=False,
+                )
+                if chain is not None
             ]
 
         if not chains:
@@ -418,23 +455,23 @@ def get_options(
 
         # Apply strike filters
         if strike_lower is not None:
-            df = df[df['strike'] >= strike_lower]
+            df = df[df["strike"] >= strike_lower]
         if strike_upper is not None:
-            df = df[df['strike'] <= strike_upper]
+            df = df[df["strike"] <= strike_upper]
 
-        df = df.sort_values(['openInterest', 'volume'], ascending=[False, False])
+        df = df.sort_values(["openInterest", "volume"], ascending=[False, False])
         df_subset = df.head(num_options)
         return to_clean_csv(df_subset)
 
     except Exception as e:
-        raise ValueError(f"Failed to retrieve options data: {str(e)}")
+        logger.exception(f"Error retrieving options data: {e}")
+        raise ValueError(f"Failed to retrieve options data: {e!s}") from e
 
 
 def get_price_history(
-    ticker: str,
-    period: Literal["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"] = "1mo"
+    ticker: str, period: Literal["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"] = "1mo"
 ) -> str:
-    """Daily bars for <=1y, monthly bars for longer periods."""
+    """Fetch daily bars for <=1y, monthly bars for longer periods."""
     ticker = validate_ticker(ticker)
 
     interval = "1mo" if period in ["2y", "5y", "10y", "max"] else "1d"
@@ -444,18 +481,20 @@ def get_price_history(
 
     # Reset index to include dates as a column
     history_with_dates = history.reset_index()
-    history_with_dates['Date'] = pd.to_datetime(history_with_dates['Date']).dt.strftime('%Y-%m-%d')
+    history_with_dates["Date"] = pd.to_datetime(history_with_dates["Date"]).dt.strftime("%Y-%m-%d")
 
     return to_clean_csv(history_with_dates)
 
 
 def get_financial_statements(
     ticker: str,
-    statement_types: list[Literal["income", "balance", "cash"]] = ["income"],
+    statement_types: list[Literal["income", "balance", "cash"]] | None = None,
     frequency: Literal["quarterly", "annual"] = "quarterly",
-    max_periods: int = 8
+    max_periods: int = 8,
 ) -> dict[str, str]:
-    """Returns dict mapping statement type to CSV (line items as rows, periods as columns)."""
+    """Fetch financial statements for a given ticker symbol."""
+    if statement_types is None:
+        statement_types = ["income"]
     ticker = validate_ticker(ticker)
 
     @api_retry
@@ -488,7 +527,16 @@ def get_financial_statements(
 
 
 def get_institutional_holders(ticker: str, top_n: int = 20) -> dict[str, Any]:
-    """Returns institutional_holders and mutual_fund_holders CSVs."""
+    """
+    Fetch institutional holders and mutual fund holders for a given ticker symbol.
+
+    Args:
+        ticker (str): Ticker symbol.
+        top_n (int): Number of top holders to return. Defaults to 20.
+
+    Returns:
+        dict[str, Any]: Dictionary containing institutional and mutual fund holders.
+    """
     ticker = validate_ticker(ticker)
 
     # Fetch both types in parallel
@@ -518,7 +566,7 @@ def get_institutional_holders(ticker: str, top_n: int = 20) -> dict[str, Any]:
 
 
 def get_earnings_history(ticker: str, max_entries: int = 8) -> str:
-    """EPS estimates vs actuals with surprise percentage."""
+    """Fetch historical earnings data with surprise analysis."""
     ticker = validate_ticker(ticker)
 
     earnings_history = yf_call(ticker, "get_earnings_history")
@@ -532,7 +580,7 @@ def get_earnings_history(ticker: str, max_entries: int = 8) -> str:
 
 
 def get_insider_trades(ticker: str, max_trades: int = 20) -> str:
-    """Buys/sells by executives and directors."""
+    """Fetch insider trading activity for a given ticker symbol."""
     ticker = validate_ticker(ticker)
 
     trades = yf_call(ticker, "get_insider_transactions")
@@ -545,15 +593,12 @@ def get_insider_trades(ticker: str, max_trades: int = 20) -> str:
     return to_clean_csv(trades)
 
 
-async def get_nasdaq_earnings_calendar(
-    date: str | None = None,
-    limit: int = 100
-) -> str:
+async def get_nasdaq_earnings_calendar(date: str | None = None) -> str:
     """Single date only (defaults to today). Call multiple times for date ranges."""
     today = datetime.date.today()
     target_date = validate_date(date) if date else today
 
-    date_str = target_date.strftime('%Y-%m-%d')
+    date_str = target_date.strftime("%Y-%m-%d")
     url = f"{NASDAQ_EARNINGS_URL}?date={date_str}"
 
     try:
@@ -561,36 +606,36 @@ async def get_nasdaq_earnings_calendar(
 
         data = await fetch_json(url, NASDAQ_HEADERS)
 
-        if 'data' in data and data['data']:
-            earnings_data = data['data']
+        if data.get("data"):
+            earnings_data = data["data"]
 
-            if earnings_data.get('headers') and earnings_data.get('rows'):
-                headers = earnings_data['headers']
-                rows = earnings_data['rows']
+            if earnings_data.get("headers") and earnings_data.get("rows"):
+                headers = earnings_data["headers"]
+                rows = earnings_data["rows"]
 
                 # Extract column names from headers dict
                 if isinstance(headers, dict):
                     column_names = list(headers.values())
                     column_keys = list(headers.keys())
                 else:
-                    column_names = [h.get('label', h) if isinstance(h, dict) else str(h) for h in headers]
+                    column_names = [h.get("label", h) if isinstance(h, dict) else str(h) for h in headers]
                     column_keys = column_names
 
                 # Convert rows to DataFrame
                 processed_rows = []
                 for row in rows:
                     if isinstance(row, dict):
-                        processed_row = [row.get(key, '') for key in column_keys]
+                        processed_row = [row.get(key, "") for key in column_keys]
                         processed_rows.append(processed_row)
 
                 if processed_rows:
                     df = pd.DataFrame(processed_rows, columns=column_names)
                     # Add date column at the beginning
-                    df.insert(0, 'Date', date_str)
+                    df.insert(0, "Date", date_str)
 
                     # Apply limit
-                    if len(df) > limit:
-                        df = df.head(limit)
+                    if len(df) > 100:
+                        df = df.head(100)
 
                     logger.info(f"Retrieved {len(df)} earnings entries for {date_str}")
                     return to_clean_csv(df)
@@ -599,43 +644,49 @@ async def get_nasdaq_earnings_calendar(
         return f"No earnings announcements found for {date_str}. This could be due to weekends, holidays, or no scheduled earnings on this date."
 
     except Exception as e:
-        logger.error(f"Error fetching earnings for {date_str}: {e}")
-        return f"Error retrieving earnings data for {date_str}: {str(e)}"
+        logger.exception(f"Error fetching earnings for {date_str}: {e}")
+        return f"Error retrieving earnings data for {date_str}: {e!s}"
 
 
 # =============================================================================
 # Technical Analysis (Optional)
 # =============================================================================
 
+
 def calculate_technical_indicator(
     ticker: str,
     indicator: Literal["SMA", "EMA", "RSI", "MACD", "BBANDS"],
-    period: Literal["1mo", "3mo", "6mo", "1y", "2y", "5y"] = "1y",
-    timeperiod: int = 14,
-    fastperiod: int = 12,
-    slowperiod: int = 26,
-    signalperiod: int = 9,
+    timeperiod: int = 9,
     nbdev: int = 2,
     matype: int = 0,
-    num_results: int = 100
+    num_results: int = 100,
 ) -> dict[str, Any]:
-    """RSI: 70=overbought, 30=oversold. MACD params: fast/slow/signal periods. BBANDS: nbdev=std devs, matype 0=SMA 1=EMA."""
+    """Calculate technical indicators using TA-Lib if available."""
     if not _ta_available:
         raise ValueError("TA-Lib library not available. Install with: pip install ta-lib")
-    
+
     import numpy as np
     from talib import MA_Type
 
     ticker = validate_ticker(ticker)
 
+    # Set default period and MACD parameters
+    period = "1y"
+    fastperiod = 12
+    slowperiod = 26
+    signalperiod = 9
+
     history = yf_call(ticker, "history", period=period, interval="1d")
-    if history is None or history.empty or 'Close' not in history.columns:
+    if history is None or history.empty or "Close" not in history.columns:
         raise ValueError(f"No valid historical data found for {ticker}")
 
-    close_prices = history['Close'].values
+    close_prices = history["Close"].values
     min_required = {
-        "SMA": timeperiod, "EMA": timeperiod * 2, "RSI": timeperiod + 1,
-        "MACD": slowperiod + signalperiod, "BBANDS": timeperiod
+        "SMA": timeperiod,
+        "EMA": timeperiod * 2,
+        "RSI": timeperiod + 1,
+        "MACD": slowperiod + signalperiod,
+        "BBANDS": timeperiod,
     }.get(indicator, timeperiod)
 
     if len(close_prices) < min_required:
@@ -646,12 +697,20 @@ def calculate_technical_indicator(
         "SMA": lambda: {"sma": talib.SMA(close_prices, timeperiod=timeperiod)},
         "EMA": lambda: {"ema": talib.EMA(close_prices, timeperiod=timeperiod)},
         "RSI": lambda: {"rsi": talib.RSI(close_prices, timeperiod=timeperiod)},
-        "MACD": lambda: dict(zip(["macd", "signal", "histogram"],
-            talib.MACD(close_prices, fastperiod=fastperiod,
-                      slowperiod=slowperiod, signalperiod=signalperiod))),
-        "BBANDS": lambda: dict(zip(["upper_band", "middle_band", "lower_band"],
-            talib.BBANDS(close_prices, timeperiod=timeperiod,
-                       nbdevup=nbdev, nbdevdn=nbdev, matype=MA_Type(matype))))
+        "MACD": lambda: dict(
+            zip(
+                ["macd", "signal", "histogram"],
+                talib.MACD(close_prices, fastperiod=fastperiod, slowperiod=slowperiod, signalperiod=signalperiod),
+                strict=False,
+            )
+        ),
+        "BBANDS": lambda: dict(
+            zip(
+                ["upper_band", "middle_band", "lower_band"],
+                talib.BBANDS(close_prices, timeperiod=timeperiod, nbdevup=nbdev, nbdevdn=nbdev, matype=MA_Type(matype)),
+                strict=False,
+            )
+        ),
     }
     indicator_values = indicator_funcs[indicator]()
 
@@ -661,12 +720,12 @@ def calculate_technical_indicator(
 
     # Reset index to show dates as a column
     price_df = history.reset_index()
-    price_df['Date'] = pd.to_datetime(price_df['Date']).dt.strftime('%Y-%m-%d')
+    price_df["Date"] = pd.to_datetime(price_df["Date"]).dt.strftime("%Y-%m-%d")
 
     # Create indicator DataFrame with same date range
     indicator_rows = []
-    for i, date in enumerate(price_df['Date']):
-        row = {'Date': date}
+    for i, date in enumerate(price_df["Date"]):
+        row = {"Date": date}
         for name, values in indicator_values.items():
             # Get the corresponding value for this date
             slice_values = values[-num_results:] if num_results > 0 else values
@@ -680,7 +739,4 @@ def calculate_technical_indicator(
 
     indicator_df = pd.DataFrame(indicator_rows)
 
-    return {
-        "price_data": to_clean_csv(price_df),
-        "indicator_data": to_clean_csv(indicator_df)
-    }
+    return {"price_data": to_clean_csv(price_df), "indicator_data": to_clean_csv(indicator_df)}
