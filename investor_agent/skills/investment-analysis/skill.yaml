@@ -5,20 +5,17 @@ author: paras@getbindu.com
 
 # Description
 description: |
-  Performs comprehensive investment analysis and financial research using real-time market data,
-  fundamental analysis, technical indicators, and sentiment analysis to generate professional
-  investment recommendations and detailed stock reports.
+  Investment analysis agent that fetches market data, financial statements, sentiment indicators,
+  and technical analysis using Yahoo Finance, CNN Fear & Greed, Nasdaq, and Google Trends APIs.
+  Generates investment analysis reports in markdown format.
 
 # Tags and Modes
 tags:
   - investment-analysis
-  - financial-research
+  - financial-data
   - stock-analysis
   - market-sentiment
-  - technical-analysis
-  - portfolio-management
-  - risk-assessment
-  - investment-recommendations
+  - technical-indicators
 
 input_modes:
   - text/plain
@@ -32,71 +29,67 @@ output_modes:
 # Example Queries
 examples:
   - "Analyze Apple (AAPL) stock for potential investment"
-  - "Compare Microsoft vs Google for long-term investment"
-  - "What's the current market sentiment and should I invest in tech stocks?"
-  - "Provide a detailed analysis of Tesla's financial health and future prospects"
-  - "Check earnings calendar and analyze companies reporting this week"
-  - "Evaluate the risk and return potential of NVIDIA stock"
-  - "Get market movers and identify best investment opportunities"
+  - "Get market movers and fear & greed index"
+  - "Show me Tesla's financial statements"
+  - "What are the earnings for this week?"
+  - "Get institutional holders for NVDA"
 
 # Detailed Capabilities
 capabilities_detail:
   primary_capability:
     supported: true
-    description: "Comprehensive investment analysis with real-time data integration"
+    description: "Fetch and analyze financial data from Yahoo Finance and other APIs"
     features:
-      - "Real-time market data analysis including market movers and price trends"
-      - "Fundamental analysis with financial statements and valuation metrics"
-      - "Technical analysis using SMA, EMA, RSI, MACD, and Bollinger Bands"
-      - "Market sentiment analysis through Fear & Greed indices and Google Trends"
-      - "Institutional ownership and insider trading analysis"
-      - "Earnings analysis and surprise tracking"
-      - "Options chain analysis for strategic positioning"
-      - "Professional investment recommendations with risk assessment"
-    limitations: "Market data may have delays; very recent events may not be reflected immediately"
+      - "Market movers (gainers, losers, most-active) via Yahoo Finance HTML scraping"
+      - "Ticker data including info, calendar, news, recommendations, upgrades/downgrades"
+      - "Price history with configurable periods (1d to max)"
+      - "Financial statements (income, balance, cash) quarterly or annual"
+      - "Institutional and mutual fund holders"
+      - "Earnings history with surprise data"
+      - "Insider trades"
+      - "Options chain with filtering by date, strike, type"
+      - "CNN Fear & Greed Index (multiple indicators)"
+      - "Crypto Fear & Greed Index from alternative.me"
+      - "Google Trends data for keywords"
+      - "Nasdaq earnings calendar by date"
+      - "Technical indicators (SMA, EMA, RSI, MACD, BBANDS) if TA-Lib installed"
+    limitations: "Data from Yahoo Finance may be delayed; TA-Lib required for technical indicators; no real-time streaming"
 
   secondary_capability:
     supported: true
-    description: "Portfolio optimization and risk management insights"
+    description: "LLM-based analysis using OpenRouter model"
     features:
-      - "Multi-stock comparison and relative strength analysis"
-      - "Sector rotation and market trend identification"
-      - "Risk assessment and position sizing recommendations"
-      - "Portfolio diversification suggestions"
-      - "Market timing and entry/exit point analysis"
+      - "Uses OpenRouter API with configurable model (default: anthropic/claude-3.5-sonnet)"
+      - "Agent generates markdown reports with investment thesis"
+      - "Mem0 integration for memory if API key provided"
+      - "Async task handling via bindufy framework"
+    limitations: "Analysis quality depends on LLM model; no built-in portfolio optimization algorithms"
 
 # Requirements
 requirements:
   packages:
-    - agno>=2.2.0
-    - bindu>=2026.1.7
-    - yfinance[nospam]>=0.2.66
-    - pandas>=2.3.3
-    - numpy>=2.0
-    - httpx>=0.28.1
-    - hishel>=1.0.0
-    - tenacity>=9.1.2
-    - pytrends>=4.9.2
-    - openai>=1.60.0
-    - python-dotenv>=1.0.1
+    - "agno>=2.2.0"
+    - "bindu>=2026.1.7"
+    - "yfinance[nospam]>=0.2.66"
+    - "pandas>=2.3.3"
+    - "numpy>=2.0"
+    - "httpx>=0.28.1"
+    - "hishel>=1.0.0"
+    - "tenacity>=9.1.2"
+    - "pytrends>=4.9.2"
+    - "openai>=1.60.0"
+    - "python-dotenv>=1.0.1"
   system:
-    - "Internet access for real-time market data"
+    - "Python 3.12+"
+    - "Internet access required"
+    - "TA-Lib optional for technical indicators"
   min_memory_mb: 512
-  external_services:
-    - Yahoo Finance API
-    - CNN Fear & Greed Index
-    - Alternative.me Crypto API
-    - Nasdaq Earnings Calendar
-    - Google Trends API
 
 # Performance Metrics
 performance:
   avg_processing_time_ms: 5000
-  avg_time_per_analysis_ms: 2000
   max_concurrent_requests: 3
   memory_per_request_mb: 512
-  timeout_seconds: 120
-  max_stocks_per_analysis: 10
   scalability: horizontal
 
 # Tool Restrictions
@@ -119,62 +112,190 @@ allowed_tools:
 # Rich Documentation
 documentation:
   overview: |
-    Provides AI-driven investment analysis and financial research capabilities.
-    Combines real-time market data, fundamental analysis, technical indicators,
-    and sentiment analysis to generate professional investment recommendations.
-
-  key_features:
-    - "Real-time market data integration with Yahoo Finance"
-    - "Comprehensive fundamental analysis with financial statements"
-    - "Advanced technical analysis using multiple indicators"
-    - "Market sentiment analysis through multiple data sources"
-    - "Institutional flow and insider trading analysis"
-    - "Professional investment recommendations with risk assessment"
-    - "Portfolio optimization and diversification insights"
+    Investment analysis agent built on Agno framework with OpenRouter LLM.
+    Uses 13 specialized tools to fetch data from Yahoo Finance, CNN, Nasdaq, and Google Trends.
+    Agent is initialized lazily on first request and runs async via bindufy server.
 
   use_cases:
-    - "Individual stock analysis for investment decisions"
-    - "Portfolio risk assessment and optimization"
-    - "Market timing and entry/exit point identification"
-    - "Sector analysis and rotation strategies"
-    - "Earnings season analysis and surprise tracking"
-    - "Market sentiment analysis and contrarian opportunities"
+    when_to_use:
+      - "Single stock fundamental analysis"
+      - "Market sentiment monitoring"
+      - "Earnings calendar tracking"
+      - "Institutional flow analysis"
+      - "Technical indicator calculation"
 
-  methodology:
-    - "Data Gathering: Real-time market data, financial statements, sentiment indicators"
-    - "Fundamental Analysis: Revenue, earnings, margins, valuation metrics"
-    - "Technical Analysis: Price trends, momentum indicators, support/resistance"
-    - "Sentiment Analysis: Fear & Greed, institutional flows, insider activity"
-    - "Risk Assessment: Volatility, concentration, market correlation"
-    - "Recommendation Generation: Buy/sell/hold with price targets and time horizons"
+    when_not_to_use:
+      - "Real-time trading execution"
+      - "Portfolio backtesting"
+      - "Algorithmic trading strategies"
+      - "Non-financial data analysis"
 
-  data_sources:
-    - "Yahoo Finance: Real-time market data, company financials, options chains"
-    - "CNN: Fear & Greed Index for market sentiment"
-    - "Alternative.me: Crypto Fear & Greed Index"
-    - "Nasdaq: Earnings calendar and company announcements"
-    - "Google Trends: Search interest and market sentiment indicators"
-    - "SEC filings: Insider trading and institutional ownership data"
+  input_structure: |
+    JSON-RPC 2.0 message with user query in parts array.
 
-  output_format:
-    - "Executive summary with clear investment recommendation"
-    - "Detailed financial analysis with key metrics and trends"
-    - "Risk assessment with potential scenarios and mitigation strategies"
-    - "Price targets and investment time horizons"
-    - "Actionable insights and monitoring recommendations"
+    Example:
+    {
+      "jsonrpc": "2.0",
+      "method": "message/send",
+      "params": {
+        "message": {
+          "role": "user",
+          "parts": [
+            {
+              "kind": "text",
+              "text": "Analyze Apple (AAPL) stock for potential investment"
+            }
+          ],
+          "kind": "message",
+          "messageId": "7c41a910-5616-49ad-b187-d93cbb400001",
+          "contextId": "7c41a910-5616-49ad-b187-d93cbb400002",
+          "taskId": "7c41a910-5616-49ad-b187-d93cbb400003"
+        },
+        "skillId": "investment-analysis-v1",
+        "configuration": {
+          "acceptedOutputModes": ["application/json"]
+        }
+      },
+      "id": "7c41a910-5616-49ad-b187-d93cbb400003"
+    }
 
-  limitations:
-    - "Market data may be delayed by 15-20 minutes"
-    - "Very recent news events may not be immediately reflected"
-    - "Technical indicators are based on historical data and may not predict future movements"
-    - "Investment recommendations should not be considered as financial advice"
-    - "Always consult with qualified financial professionals for investment decisions"
+  output_format: |
+    JSON-RPC 2.0 result with task history and artifacts containing markdown analysis.
+
+    Success Response:
+    {
+      "jsonrpc": "2.0",
+      "id": "7c41a910-5616-49ad-b187-d93cbb400004",
+      "result": {
+        "id": "7c41a910-5616-49ad-b187-d93cbb400003",
+        "context_id": "7c41a910-5616-49ad-b187-d93cbb400002",
+        "kind": "task",
+        "status": {
+          "state": "completed",
+          "timestamp": "2026-03-06T12:32:09.822685+00:00"
+        },
+        "history": [
+          {
+            "kind": "message",
+            "role": "user",
+            "parts": [{"kind": "text", "text": "Analyze Apple (AAPL) stock..."}]
+          },
+          {
+            "kind": "message",
+            "role": "assistant",
+            "parts": [{"kind": "text", "text": "# Investment Analysis: Apple Inc. (AAPL)..."}]
+          }
+        ],
+        "artifacts": [
+          {
+            "name": "result",
+            "parts": [{"kind": "text", "text": "Markdown formatted investment analysis"}]
+          }
+        ]
+      }
+    }
+
+  error_handling:
+    - "API failures: Retry with exponential backoff (3 attempts)"
+    - "Rate limits: Automatic retry with 2-30 second delays"
+    - "Invalid ticker: Return error message with validation guidance"
+    - "Missing TA-Lib: Skip technical indicators, continue with other analysis"
+    - "Network errors: Graceful degradation with partial results"
+
+  examples:
+    - title: "Comprehensive Stock Analysis"
+      input:
+        parts:
+          - kind: "text"
+            text: "Provide a comprehensive investment analysis of Apple (AAPL)"
+      output:
+        text: |
+          # Investment Analysis: Apple Inc. (AAPL)
+
+          ## Executive Summary
+          Apple Inc. continues to demonstrate strong market leadership and financial performance.
+          **BUY** rating with 12-month price target of $295 (13.3% upside from $260.29).
+
+          ## Key Financial Metrics
+          - Market Cap: $3.83T
+          - Revenue (TTM): $435.62B
+          - P/E Ratio: 32.91 (Forward: 27.94)
+          - Operating Margin: 35.37%
+
+          ## Investment Thesis
+          - Strong ecosystem and services growth
+          - Robust financial position with cash generation
+          - AI integration opportunities
+          - Premium brand positioning
+
+          ## Risks
+          - Product cycle dependency
+          - Regulatory scrutiny
+          - Competition from Android ecosystem
 
   best_practices:
-    - "Use multiple data sources for comprehensive analysis"
-    - "Consider both fundamental and technical factors"
-    - "Assess market sentiment alongside quantitative metrics"
-    - "Always evaluate risk factors before making investment decisions"
-    - "Monitor earnings calendar and upcoming catalysts"
-    - "Diversify portfolio to manage concentration risk"
-    - "Set clear entry and exit criteria for investments"
+    for_developers:
+      - "Set OPENROUTER_API_KEY and MEM0_API_KEY environment variables"
+      - "Use --model flag to specify different OpenRouter models"
+      - "Install TA-Lib for technical indicator support: pip install ta-lib"
+      - "Handle rate limits from Yahoo Finance with retry logic"
+
+    for_orchestrators:
+      - "Route stock analysis and market data queries to this skill"
+      - "Expect 5-15 second processing time per request"
+      - "Check task status via tasks/get endpoint"
+      - "Monitor for rate limit errors from external APIs"
+      - "Chain with portfolio management or risk assessment skills"
+
+  installation: |
+    Install via uv package manager.
+
+    Required packages:
+    uv sync
+
+    Environment variables:
+    OPENROUTER_API_KEY=<your-key>
+    MEM0_API_KEY=<your-key>  # Optional
+
+    Run:
+    uv run python -m investor_agent --model anthropic/claude-3.5-sonnet
+
+  versioning:
+    - version: "1.0.0"
+      date: "2026-01-12"
+      changes: "Initial release with 13 financial analysis tools"
+
+# Assessment fields for skill negotiation
+assessment:
+  keywords:
+    - "stock"
+    - "investment"
+    - "market"
+    - "financial"
+    - "ticker"
+    - "analysis"
+    - "earnings"
+    - "portfolio"
+
+  specializations:
+    - domain: "financial-analysis"
+      confidence_boost: 0.3
+    - domain: "market-research"
+      confidence_boost: 0.2
+
+  anti_patterns:
+    - "Real-time trading execution"
+    - "Portfolio backtesting"
+    - "Non-financial content analysis"
+    - "Image or video processing"
+
+  complexity_indicators:
+    simple:
+      - "Get market movers"
+      - "Fetch stock price"
+    medium:
+      - "Analyze single stock with financials"
+      - "Check earnings calendar"
+    complex:
+      - "Comprehensive investment analysis with multiple data sources"
+      - "Multi-stock comparison with technical indicators"
